@@ -105,7 +105,7 @@ def main():
     ax2.set_ylabel('Accuracy')
     ax2.legend()
     
-    fig.savefig("figures/contrastive_loss_and_accuracy.pdf")
+    fig.savefig("figures/contrastive_loss_and_accuracy.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     # Evaluation

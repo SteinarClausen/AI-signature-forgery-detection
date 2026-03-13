@@ -59,7 +59,7 @@ def evaluate_model(siamese_model, test_gen, threshold=0.5):
     fig, ax = plt.subplots(figsize=(4, 4))
     disp.plot(cmap=plt.cm.Blues, ax=ax)
     # plt.title(f"Confusion Matrix (Threshold={threshold})")
-    plt.savefig("figures/confusion_matrix.pdf", bbox_inches="tight")
+    plt.savefig("figures/confusion_matrix.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     return cm
