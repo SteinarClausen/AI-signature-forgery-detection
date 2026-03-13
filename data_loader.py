@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import pandas as pd
 import tensorflow as tf
-from tasks.task7 import get_crop_dimensions, minimize_height_finite_difference, rotate_image
+from image_handling import get_crop_dimensions, minimize_height_finite_difference, rotate_image
 from utilities import get_image_binary
 
 import matplotlib.pyplot as plt
