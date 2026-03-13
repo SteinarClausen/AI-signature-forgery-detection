@@ -5,12 +5,14 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "graphviz>=0.21",
     "keras>=3.13.2",
     "matplotlib>=3.10.8",
     "numba>=0.64.0",
     "numpy>=2.4.3",
     "opencv-python>=4.13.0.92",
     "pandas>=3.0.1",
+    "pydot>=4.0.1",
     "scikit-learn>=1.8.0",
     "tensorflow>=2.21.0",
 ]

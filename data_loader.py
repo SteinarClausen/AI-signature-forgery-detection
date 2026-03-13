@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import pandas as pd
 import tensorflow as tf
-from task7 import get_crop_dimensions, minimize_height_finite_difference, rotate_image
+from tasks.task7 import get_crop_dimensions, minimize_height_finite_difference, rotate_image
 from utilities import get_image_binary
 
 import matplotlib.pyplot as plt
@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 class SiameseDataGenerator(tf.keras.utils.Sequence):
     def __init__(self, data, batch_size=16):
         if isinstance(data, str):
-            self.df = pd.read_csv(csv_file)
+            self.df = pd.read_csv(data)
         else:
             self.df = data
         
@@ -61,29 +61,29 @@ class SiameseDataGenerator(tf.keras.utils.Sequence):
         return (np.array(batch_s1), np.array(batch_s2)), np.array(labels)
 
 
-    def image_sizes(self):
-        """Returns: x_sizes, y_sizes, and plots them"""
-        x_sizes: list[int] = []
-        y_sizes: list[int] = []
-        for idx, row in self.df.iterrows():
-            img_path = row["image_path_filtered"]
-            img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-            if img is None:
-                print(f"Failed to read image: {img_path}")
-                continue
-            binary_img = get_image_binary(img)
-            theta_opt, h_opt, hist = minimize_height_finite_difference(binary_img, theta0=0.0, h0=1.0, max_iter=120)
+    # def image_sizes(self):
+    #     """Returns: x_sizes, y_sizes, and plots them"""
+    #     x_sizes: list[int] = []
+    #     y_sizes: list[int] = []
+    #     for idx, row in self.df.iterrows():
+    #         img_path = row["image_path_filtered"]
+    #         img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    #         if img is None:
+    #             print(f"Failed to read image: {img_path}")
+    #             continue
+    #         binary_img = get_image_binary(img)
+    #         theta_opt, h_opt, hist = minimize_height_finite_difference(binary_img, theta0=0.0, h0=1.0, max_iter=120)
 
-            rot_opt = rotate_image(binary_img, theta_opt)
-            y0, y1, x0, x1 = get_crop_dimensions(rot_opt)
+    #         rot_opt = rotate_image(binary_img, theta_opt)
+    #         y0, y1, x0, x1 = get_crop_dimensions(rot_opt)
 
-            x_sizes.append(x1 - x0)
-            y_sizes.append(y1 - y0)
+    #         x_sizes.append(x1 - x0)
+    #         y_sizes.append(y1 - y0)
         
-        plt.scatter(x_sizes, y_sizes)
-        plt.xlabel("Width (pixels)")
-        plt.ylabel("Height (pixels)")
-        plt.title("Scatter plot of signature image sizes")
-        plt.grid()
-        plt.show()
-        return x_sizes, y_sizes
+    #     plt.scatter(x_sizes, y_sizes)
+    #     plt.xlabel("Width (pixels)")
+    #     plt.ylabel("Height (pixels)")
+    #     plt.title("Scatter plot of signature image sizes")
+    #     plt.grid()
+    #     plt.show()
+    #     return x_sizes, y_sizes

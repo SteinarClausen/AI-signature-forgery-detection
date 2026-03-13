@@ -1,73 +1,41 @@
-from task2 import read_image
-from task3 import show_image_histogram
-from task5 import task5
-from task6 import task6
-from task7 import task7
-from task8 import task8a, task8b 
-
 from data_loader import SiameseDataGenerator
 from model import build_base_cnn, visualize_embeddings, evaluate_model
-from utilities import display_img, euclidean_distance, contrastive_loss
+from utilities import display_img, euclidean_distance, contrastive_loss, pair_accuracy
 
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 import pandas as pd
 
 from tensorflow.keras import layers, Model
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.utils import plot_model
+
+from tasks.tasks import run_tasks
 
 def main():
-    image_str = "exampleSignature.png"
-    # Task 2: read and print the image
-    # print(read_image(image_str))
-    
-    # Task 3: Show two image histograms
-    # show_image_histogram(image_str, bins=64)
-    # show_image_histogram(image_str, bins=256)
+    # run_tasks() # to run exercise tasks
 
-    # Task 5: Apply the convolution kernals to the images
-    # img_A, img_B, img_C, img_D = task5(image_str)
-
-    # display_img(img_A)
-    # display_img(img_B)
-    # display_img(img_C)
-    # display_img(img_D)
-
-    # task 6: threshold the image and display the resulting image
-    # task6(image_str)
-    # Use this one for the signature correcting.
-    # task 7: optimize the rotation of the image to minimize the height of the bounding box
-    # image_str_diag = "exampleSignature_diag.png"
-    # task7(image_str_diag)
-    # task 8
-    # task8a(image_str)
-    # task8b(image_str)
-
-    # Dataloader class
-    # 1. Last inn dataframen én gang
+    # Run AI model
     full_df = pd.read_csv("signatures-dataset/filtered_dataframe_binarized.csv")
     
-    # 2. Hent unike skribenter og splitt dem (80% trening, 20% test)
     unique_persons = full_df['person_id'].unique()
-    # 2. Første splitt: Ta ut 15% til et helt separat TEST-sett
+    # 15% seperate test set.
     train_val_persons, test_persons = train_test_split(
         unique_persons, test_size=0.15, random_state=42
     )
     
-    # 3. Andre splitt: Del resten i Trening (ca 70% totalt) og Validering (ca 15% totalt)
+    # 70% training 15% validation
     train_persons, val_persons = train_test_split(
         train_val_persons, test_size=0.176, random_state=42 # 0.176 av 0.85 er ca 15%
     )    
-    # 3. Lag undersett av dataframen
+
     train_df = full_df[full_df['person_id'].isin(train_persons)]
     val_df = full_df[full_df['person_id'].isin(val_persons)]
     test_df = full_df[full_df['person_id'].isin(test_persons)]
     
-    # 4. Oppdater generatorene til å ta inn DataFrame (se endring i klasse under)
-    train_gen = SiameseDataGenerator(train_df, batch_size=16)
-    val_gen = SiameseDataGenerator(val_df, batch_size=16)
-    test_gen = SiameseDataGenerator(test_df, batch_size=16)
-
-    # print(siam_data_generator[0])  # Get the first batch of data
+    train_gen = SiameseDataGenerator(train_df, batch_size=32)
+    val_gen = SiameseDataGenerator(val_df, batch_size=32)
+    test_gen = SiameseDataGenerator(test_df, batch_size=32)
     
     # Input shape for the model.
     INPUT_SHAPE = (375, 616, 1)
@@ -75,45 +43,77 @@ def main():
     img1_input = layers.Input(shape=INPUT_SHAPE, name="signature_1")
     img2_input = layers.Input(shape=INPUT_SHAPE, name="signature_2")
 
-    # 2. Hent base-nettverket
+    # Get the base network for embedding extraction
     base_network = build_base_cnn(input_shape=INPUT_SHAPE)
 
-    # 3. Send BEGGE bildene gjennom SAMME nettverk (Deler parametere)
+    plot_model(
+        base_network, 
+        to_file='siamese_architecture.png', 
+        show_shapes=True, 
+        show_layer_names=True,
+        expand_nested=True # Dette gjør at den bretter ut base_cnn så du ser alle Conv2D-lagene
+    )
+
+    return 
+
+    # Send both inputs through the same base network (shared weights)
     emb1 = base_network(img1_input)
     emb2 = base_network(img2_input)
 
-    # 4. Regn ut Euklidsk avstand mellom embeddingene
+    # Calculate the euclidean distance between the two embeddings
     distance = layers.Lambda(euclidean_distance, name="distance")([emb1, emb2])
 
-    # 5. Bygg og kompiler den ferdige Siamese-modellen
+    # Build and compile the Siames Network
     siamese_model = Model(inputs=[img1_input, img2_input], outputs=distance)
-    siamese_model.compile(optimizer='adam', loss=contrastive_loss)
-
+    siamese_model.compile(optimizer='adam', loss=contrastive_loss, metrics=[pair_accuracy])
+    
     siamese_model.summary()
+    
+    print("Generating t-SNE plot before training...")
+    visualize_embeddings(base_network, test_gen, title="t-SNE before training (random initialization)")
+
+    early_stopper = EarlyStopping(
+        monitor='val_pair_accuracy', 
+        patience=8,                  
+        mode='max',                  
+        restore_best_weights=True    
+    )
     
     history = siamese_model.fit(
         train_gen,
         validation_data=val_gen,
-        epochs=10
+        epochs=16,
+        callbacks=[early_stopper]
     )
 
-    plt.plot(history.history['loss'], label='Trenings-tap')
-    plt.plot(history.history['val_loss'], label='Validerings-tap')
-    plt.title('Modellens læringskurve')
-    plt.xlabel('Epoker')
-    plt.ylabel('Tap (Contrastive Loss)')
-    plt.legend()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(6, 2.5))
+    
+    # Plot for Loss
+    ax1.plot(history.history['loss'], label='Training Loss')
+    ax1.plot(history.history['val_loss'], label='Validation Loss')
+    # ax1.set_title('Contrastive Loss')
+    ax1.set_xlabel('Epochs')
+    ax1.set_ylabel('Loss')
+    ax1.legend()
+
+    # Plot for Accuracy
+    ax2.plot(history.history['pair_accuracy'], label='Training-accuracy')
+    ax2.plot(history.history['val_pair_accuracy'], label='Validation-accuracy')
+    # ax2.set_title('Accuracy (Threshold=0.5)')
+    ax2.set_xlabel('Epochs')
+    ax2.set_ylabel('Accuracy')
+    ax2.legend()
+    
+    fig.savefig("figures/contrastive_loss_and_accuracy.pdf")
     plt.show()
 
-    # 12c: Evaluering
+    # Evaluation
     print("Evaluerer modell...")
     evaluate_model(siamese_model, test_gen)
 
-    # 12d: t-SNE Visualisering
-    print("Genererer t-SNE plott...")
-    visualize_embeddings(base_network, test_gen)
-
-
+    # t-SNE Visualization
+    print("Generating t-SNE after training...")
+    visualize_embeddings(base_network, test_gen, title="t-SNE after training")
     pass
 
 

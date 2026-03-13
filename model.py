@@ -12,31 +12,26 @@ INPUT_SHAPE = (375, 616, 1)
 def build_base_cnn(input_shape=INPUT_SHAPE, embedding_dim=128):
     inputs = layers.Input(shape=input_shape)
     
-    # 1. Convolution + Pooling
+    # Convolution + Pooling
     x = layers.Conv2D(32, (3, 3), activation='relu')(inputs)
-    # Tensor shape: (None, 148, 298, 32)
     x = layers.MaxPooling2D((2, 2))(x)
-    # Tensor shape: (None, 74, 149, 32)
     
-    # 2. Convolution + Pooling
     x = layers.Conv2D(64, (3, 3), activation='relu')(x)
-    # Tensor shape: (None, 72, 147, 64)
     x = layers.MaxPooling2D((2, 2))(x)
-    # Tensor shape: (None, 36, 73, 64)
     
-    # 3. Convolution + Pooling
     x = layers.Conv2D(128, (3, 3), activation='relu')(x)
-    # Tensor shape: (None, 34, 71, 128)
     x = layers.MaxPooling2D((2, 2))(x)
-    # Tensor shape: (None, 17, 35, 128)
     
-    # Flatten og Embedding
+    x = layers.Conv2D(128, (3, 3), activation='relu')(x)
+    x = layers.MaxPooling2D((2, 2))(x)
+
+    x = layers.Conv2D(128, (3, 3), activation='relu')(x)
+    x = layers.MaxPooling2D((2, 2))(x)
+
+    # Flatten and Embedding
     x = layers.Flatten()(x)
-    # Tensor shape: (None, 76160)
     
-    # Dense layer for å lage selve embedding-vektoren e i R^d
     embeddings = layers.Dense(embedding_dim, activation=None)(x)
-    # Tensor shape: (None, 128)  <- Dette er d!
     
     return Model(inputs, embeddings, name="base_cnn")
 
@@ -46,7 +41,6 @@ def evaluate_model(siamese_model, test_gen, threshold=0.5):
     y_true = []
     y_pred_dist = []
 
-    # Gå gjennom test-settet (her kan du bruke val_gen eller en egen test_gen)
     for i in range(len(test_gen)):
         (img1, img2), labels = test_gen[i]
         distances = siamese_model.predict([img1, img2], verbose=0)
@@ -57,28 +51,28 @@ def evaluate_model(siamese_model, test_gen, threshold=0.5):
     y_true = np.array(y_true)
     y_pred_dist = np.array(y_pred_dist)
 
-    # Konverter avstand til binær prediksjon: 
-    # Avstand < threshold betyr "Ekte" (0), ellers "Falsk" (1)
+    # Distance < threshold means "Real" (0), if not "False" (1)
     y_pred = (y_pred_dist > threshold).astype(int)
 
-    # Lag og vis forvirringsmatrisen
     cm = confusion_matrix(y_true, y_pred)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Ekte', 'Falsk'])
-    disp.plot(cmap=plt.cm.Blues)
-    plt.title(f"Confusion Matrix (Threshold={threshold})")
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Real', 'Fake'])
+    fig, ax = plt.subplots(figsize=(4, 4))
+    disp.plot(cmap=plt.cm.Blues, ax=ax)
+    # plt.title(f"Confusion Matrix (Threshold={threshold})")
+    plt.savefig("figures/confusion_matrix.pdf", bbox_inches="tight")
     plt.show()
 
     return cm
 
 
 
-def visualize_embeddings(base_network, gen, num_batches=5):
+def visualize_embeddings(base_network, gen, num_batches=5, title="t-SNE of Signature Embeddings"):
     all_embeddings = []
     all_labels = []
 
     for i in range(num_batches):
         (img1, img2), labels = gen[i]
-        # Vi trekker ut embeddinger for det første bildet i hvert par
+        # Pick out embedding for img1.
         embeddings = base_network.predict(img1, verbose=0)
         all_embeddings.append(embeddings)
         all_labels.append(labels)
@@ -86,12 +80,15 @@ def visualize_embeddings(base_network, gen, num_batches=5):
     all_embeddings = np.vstack(all_embeddings)
     all_labels = np.vstack(all_labels).flatten()
 
-    # Reduser fra f.eks. 128 dimensjoner til 2 for plotting
+    # Reduce dimensions to 2D for visualization
     tsne = TSNE(n_components=2, random_state=42)
     embeddings_2d = tsne.fit_transform(all_embeddings)
 
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(5, 4))
     scatter = plt.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], c=all_labels, cmap='coolwarm', alpha=0.7)
-    plt.colorbar(scatter, ticks=[0, 1], label='0: Ekte, 1: Falsk')
-    plt.title("t-SNE av Signature Embeddings")
+    plt.colorbar(scatter, ticks=[0, 1], label='0: Real, 1: Fake')
+    # plt.title(title)
+    plt.xticks([])
+    plt.yticks([])
+    plt.savefig(f"figures/{title}")
     plt.show()
