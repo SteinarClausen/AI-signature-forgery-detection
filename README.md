@@ -53,7 +53,7 @@ pip install uv
 
 3. Install depencies
 ```bash
-uv sync
+uv sync --link-mode=copy
 ```
 
 4. Run

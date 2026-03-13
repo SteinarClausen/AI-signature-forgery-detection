@@ -10,8 +10,6 @@ from tensorflow.keras import layers, Model
 from tensorflow.keras.callbacks import EarlyStopping
 # from tensorflow.keras.utils import plot_model
 
-from tasks.tasks import run_tasks
-
 def main():
     # run_tasks() # to run exercise tasks
 
