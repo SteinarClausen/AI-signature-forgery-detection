@@ -8,7 +8,7 @@ import pandas as pd
 
 from tensorflow.keras import layers, Model
 from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.utils import plot_model
+# from tensorflow.keras.utils import plot_model
 
 from tasks.tasks import run_tasks
 
@@ -46,15 +46,16 @@ def main():
     # Get the base network for embedding extraction
     base_network = build_base_cnn(input_shape=INPUT_SHAPE)
 
-    plot_model(
-        base_network, 
-        to_file='siamese_architecture.png', 
-        show_shapes=True, 
-        show_layer_names=True,
-        expand_nested=True # Dette gjør at den bretter ut base_cnn så du ser alle Conv2D-lagene
-    )
+    # get an image of the model
+    # plot_model(
+    #     base_network, 
+    #     to_file='siamese_architecture.png', 
+    #     show_shapes=True, 
+    #     show_layer_names=True,
+    #     expand_nested=True # Dette gjør at den bretter ut base_cnn så du ser alle Conv2D-lagene
+    # )
+    # return 
 
-    return 
 
     # Send both inputs through the same base network (shared weights)
     emb1 = base_network(img1_input)
