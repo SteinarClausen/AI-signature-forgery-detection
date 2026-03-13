@@ -16,12 +16,14 @@ The Siamese network reaches a validation accuracy between 80% and 90% and minimi
 
 The dataset consists of paired images, genuine signatures and good forgeries. The primary challenge is to teach the model to ignore the natural variations in a person's handwriting, while seeing the structural errors in forgeries.
 
-**Genuine Signature:** ![Original Signature 1](figures/original_1.png)
+**Genuine Signature:** 
 
+![Original Signature 1](figures/original_1.png)
 ![Original Signature 2](figures/original_2.png)
 
-**Forged Signature:** ![Forged Signature 1](figures/forgery_1.png)  
+**Forged Signature:** 
 
+![Forged Signature 1](figures/forgery_1.png)  
 ![Forged Signature 2](figures/forgery_2.png)
 
 ## The Model Architecture
@@ -36,9 +38,12 @@ Instead of classifying a single signature directly, the Siamese architecture tak
 
 Once the two embedding vectors are generated, the network calculates the Euclidean distance between them. The model is trained using a Contrastive Loss function, which penalizes the network if the distance between two genuine signatures is too large, or if the distance between a genuine signature and a forgery is too small.
 
-**Full Siamese Network:** 
+<details>
+<summary>Click to view full Siamese Network Architecture</summary>
 
 ![Siamese Architecture](figures/siamese_architecture.png)
+
+</details>
 
 ## Setup and Installation
 
